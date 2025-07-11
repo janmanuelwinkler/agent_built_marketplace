@@ -1,0 +1,11 @@
+services:
+  marketplace:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./backend/marketplace.db:/app/marketplace.db
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
