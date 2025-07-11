@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form
+from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey
@@ -8,12 +8,24 @@ from typing import List, Optional
 import os
 import uuid
 from PIL import Image
+from passlib.context import CryptContext
+from passlib.hash import bcrypt
+import jwt
+from jwt.exceptions import InvalidTokenError
 
 # Database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./marketplace.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# JWT settings
+SECRET_KEY = "marketplace-secret-key-change-in-production"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Models
 class User(Base):
@@ -22,6 +34,17 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
+    password_hash = Column(String)
+    vorname = Column(String)
+    nachname = Column(String)
+    geburtsdatum = Column(String)  # Format: DD-MM-YYYY
+    strasse = Column(String)
+    hausnummer = Column(String)
+    postleitzahl = Column(String)
+    ort = Column(String)
+    land = Column(String)
+    telefon = Column(String)
+    datenschutz_zugestimmt = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     items = relationship("Item", back_populates="owner")
@@ -78,6 +101,31 @@ os.makedirs("uploads", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+# Utility functions for password hashing and JWT
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def authenticate_user(db: Session, username: str, password: str):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return False
+    if not verify_password(password, user.password_hash):
+        return False
+    return user
+
 # Dependency
 def get_db():
     db = SessionLocal()
@@ -92,22 +140,117 @@ def read_root():
     return {"message": "Marketplace API"}
 
 @app.post("/users/")
-def create_user(username: str = Form(...), email: str = Form(...), db: Session = Depends(get_db)):
+def create_user(
+    username: str = Form(...), 
+    email: str = Form(...),
+    password: str = Form(...),
+    vorname: str = Form(...),
+    nachname: str = Form(...),
+    geburtsdatum: str = Form(...),
+    strasse: str = Form(...),
+    hausnummer: str = Form(...),
+    postleitzahl: str = Form(...),
+    ort: str = Form(...),
+    land: str = Form(...),
+    telefon: str = Form(...),
+    datenschutz_zugestimmt: str = Form(...),
+    db: Session = Depends(get_db)
+):
     # Check if username already exists
     existing_user = db.query(User).filter(User.username == username).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Username already exists")
+        raise HTTPException(status_code=400, detail="Benutzername existiert bereits")
     
     # Check if email already exists
     existing_email = db.query(User).filter(User.email == email).first()
     if existing_email:
-        raise HTTPException(status_code=400, detail="Email already exists")
+        raise HTTPException(status_code=400, detail="E-Mail-Adresse existiert bereits")
     
-    db_user = User(username=username, email=email)
+    # Check if privacy consent is given
+    consent_value = datenschutz_zugestimmt.lower() in ['true', '1', 'yes', 'on']
+    if not consent_value:
+        raise HTTPException(status_code=400, detail="Datenschutz-Zustimmung ist erforderlich")
+    
+    # Hash the password
+    hashed_password = get_password_hash(password)
+    
+    db_user = User(
+        username=username, 
+        email=email,
+        password_hash=hashed_password,
+        vorname=vorname,
+        nachname=nachname,
+        geburtsdatum=geburtsdatum,
+        strasse=strasse,
+        hausnummer=hausnummer,
+        postleitzahl=postleitzahl,
+        ort=ort,
+        land=land,
+        telefon=telefon,
+        datenschutz_zugestimmt=consent_value
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return db_user
+    
+    # Return user without password hash
+    return {
+        "id": db_user.id,
+        "username": db_user.username,
+        "email": db_user.email,
+        "vorname": db_user.vorname,
+        "nachname": db_user.nachname,
+        "geburtsdatum": db_user.geburtsdatum,
+        "adresse": {
+            "strasse": db_user.strasse,
+            "hausnummer": db_user.hausnummer,
+            "postleitzahl": db_user.postleitzahl,
+            "ort": db_user.ort,
+            "land": db_user.land
+        },
+        "telefon": db_user.telefon,
+        "datenschutz_zugestimmt": db_user.datenschutz_zugestimmt,
+        "created_at": db_user.created_at
+    }
+
+@app.post("/login/")
+def login(
+    username: str = Form(...), 
+    password: str = Form(...), 
+    db: Session = Depends(get_db)
+):
+    user = authenticate_user(db, username, password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Falscher Benutzername oder Passwort",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "vorname": user.vorname,
+            "nachname": user.nachname,
+            "geburtsdatum": user.geburtsdatum,
+            "adresse": {
+                "strasse": user.strasse,
+                "hausnummer": user.hausnummer,
+                "postleitzahl": user.postleitzahl,
+                "ort": user.ort,
+                "land": user.land
+            },
+            "telefon": user.telefon,
+            "datenschutz_zugestimmt": user.datenschutz_zugestimmt
+        }
+    }
 
 @app.get("/users/{user_id}")
 def get_user(user_id: int, db: Session = Depends(get_db)):
