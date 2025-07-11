@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+
+
 ## Project Overview
 
 This is a marketplace web application for buying and selling secondhand items (electronics, furniture, etc.), similar to ricardo.ch. The project consists of:
@@ -39,7 +41,7 @@ curl http://localhost:8000/categories/
 
 # Authentication endpoints
 curl -X POST -F "username=testuser" -F "password=testpass" http://localhost:8000/login/
-curl -X POST -F "username=testuser" -F "email=test@example.com" -F "password=testpass" -F "name=Test User" -F "address=123 Main St" -F "phone=555-1234" -F "age=25" http://localhost:8000/users/
+curl -X POST -F "username=testuser" -F "email=test@example.com" -F "password=testpass" -F "vorname=Test" -F "nachname=User" -F "geburtsdatum=01-01-1990" -F "strasse=Main St" -F "hausnummer=123" -F "postleitzahl=12345" -F "ort=Berlin" -F "land=Germany" -F "telefon=555-1234" -F "datenschutz_zugestimmt=true" http://localhost:8000/users/
 ```
 
 ### Database Management
@@ -62,7 +64,7 @@ curl -X POST -F "username=testuser" -F "email=test@example.com" -F "password=tes
 - **Static serving**: Backend serves frontend files at `/static/`
 
 ### Key Features Implementation
-- **User Registration**: Complete user profiles with username, email, password, name, address, phone, age
+- **User Registration**: Complete user profiles with username, email, password, vorname, nachname, geburtsdatum, strasse, hausnummer, postleitzahl, ort, land, telefon, datenschutz_zugestimmt
 - **Authentication**: Secure login system with JWT tokens and session management
 - **Item Listings**: Multi-part form upload with image processing
 - **Bidding System**: Real-time price updates, time-based auctions
@@ -70,7 +72,7 @@ curl -X POST -F "username=testuser" -F "email=test@example.com" -F "password=tes
 - **Session Management**: Persistent user sessions with localStorage
 
 ### Database Schema
-- **users**: id, username, email, password_hash, name, address, phone, age, created_at
+- **users**: id, username, email, password_hash, vorname, nachname, geburtsdatum, strasse, hausnummer, postleitzahl, ort, land, telefon, datenschutz_zugestimmt, created_at
 - **items**: id, title, description, category, starting_price, current_price, image_url, owner_id, created_at, ends_at, is_active
 - **bids**: id, amount, item_id, bidder_id, created_at
 
@@ -88,7 +90,7 @@ curl -X POST -F "username=testuser" -F "email=test@example.com" -F "password=tes
 ## API Endpoints
 
 ### Authentication
-- `POST /users/` - Register new user (username, email, password, name, address, phone, age)
+- `POST /users/` - Register new user (username, email, password, vorname, nachname, geburtsdatum, strasse, hausnummer, postleitzahl, ort, land, telefon, datenschutz_zugestimmt)
 - `POST /login/` - Login user (username, password) - returns JWT token
 
 ### Items

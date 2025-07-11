@@ -5,7 +5,10 @@ services:
       - "8000:8000"
     volumes:
       - ./uploads:/app/uploads
-      - ./backend/marketplace.db:/app/marketplace.db
+      - marketplace_db:/app/data
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
+
+volumes:
+  marketplace_db:
