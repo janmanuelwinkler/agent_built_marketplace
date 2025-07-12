@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey, func
 from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 import os
 import uuid
@@ -38,7 +38,7 @@ class User(Base):
     password_hash = Column(String)
     vorname = Column(String)
     nachname = Column(String)
-    geburtsdatum = Column(String)  # Format: DD-MM-YYYY
+    geburtsdatum = Column(String)  # Format: DD.MM.YYYY
     strasse = Column(String)
     hausnummer = Column(String)
     postleitzahl = Column(String)
@@ -46,7 +46,12 @@ class User(Base):
     land = Column(String)
     telefon = Column(String)
     datenschutz_zugestimmt = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        nullable=False
+    )
     
     items = relationship("Item", back_populates="owner")
     bids = relationship("Bid", back_populates="bidder")
@@ -62,7 +67,12 @@ class Item(Base):
     current_price = Column(Float)
     image_url = Column(String)
     owner_id = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        nullable=False
+    )
     ends_at = Column(DateTime)
     is_active = Column(Boolean, default=True)
     
@@ -76,7 +86,12 @@ class Bid(Base):
     amount = Column(Float)
     item_id = Column(Integer, ForeignKey("items.id"))
     bidder_id = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        nullable=False
+    )
     
     item = relationship("Item", back_populates="bids")
     bidder = relationship("User", back_populates="bids")

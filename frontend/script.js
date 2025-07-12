@@ -104,9 +104,9 @@ document.getElementById('userForm').addEventListener('submit', async (e) => {
     
     // Validate date format
     const geburtsdatum = document.getElementById('geburtsdatum').value;
-    const datePattern = /^[0-9]{2}-[0-9]{2}-[0-9]{4}$/;
+    const datePattern = /^[0-9]{2}\.[0-9]{2}\.[0-9]{4}$/;
     if (!datePattern.test(geburtsdatum)) {
-        alert('Bitte geben Sie das Geburtsdatum im Format DD-MM-YYYY ein (z.B. 12-03-1990)');
+        alert('Bitte geben Sie das Geburtsdatum im Format DD.MM.YYYY ein (z.B. 12.03.1990)');
         return;
     }
     
