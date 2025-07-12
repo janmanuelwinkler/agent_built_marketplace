@@ -305,6 +305,105 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+@app.put("/users/{user_id}")
+def update_user(
+    user_id: int,
+    email: str = Form(...),
+    vorname: str = Form(...),
+    nachname: str = Form(...),
+    geburtsdatum: str = Form(...),
+    strasse: str = Form(...),
+    hausnummer: str = Form(...),
+    postleitzahl: str = Form(...),
+    ort: str = Form(...),
+    land: str = Form(...),
+    telefon: str = Form(...),
+    password: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    # Check if email already exists (excluding current user)
+    existing_email = db.query(User).filter(User.email == email, User.id != user_id).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="E-Mail-Adresse existiert bereits")
+    
+    # Update user fields
+    user.email = email
+    user.vorname = vorname
+    user.nachname = nachname
+    user.geburtsdatum = geburtsdatum
+    user.strasse = strasse
+    user.hausnummer = hausnummer
+    user.postleitzahl = postleitzahl
+    user.ort = ort
+    user.land = land
+    user.telefon = telefon
+    
+    # Update password if provided
+    if password:
+        user.password_hash = get_password_hash(password)
+    
+    db.commit()
+    db.refresh(user)
+    
+    # Return updated user without password hash
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "vorname": user.vorname,
+        "nachname": user.nachname,
+        "geburtsdatum": user.geburtsdatum,
+        "adresse": {
+            "strasse": user.strasse,
+            "hausnummer": user.hausnummer,
+            "postleitzahl": user.postleitzahl,
+            "ort": user.ort,
+            "land": user.land
+        },
+        "telefon": user.telefon,
+        "datenschutz_zugestimmt": user.datenschutz_zugestimmt
+    }
+
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
+    
+    # Check if user is the highest bidder on any active auctions
+    # Get all active items where user has the highest bid
+    active_items_with_top_bids = db.query(Item).join(Bid).filter(
+        Item.is_active == True,
+        Item.ends_at > datetime.now(timezone.utc),
+        Bid.bidder_id == user_id,
+        Bid.amount == Item.current_price
+    ).all()
+    
+    if active_items_with_top_bids:
+        # User is top bidder on active auctions, cannot delete immediately
+        # Mark user for deletion after auctions end (you might want to add a flag for this)
+        return {"deleted": False, "message": "Benutzer hat noch aktive Auktionen als Höchstbietender"}
+    
+    # User can be deleted immediately
+    # Delete user's bids first (due to foreign key constraints)
+    db.query(Bid).filter(Bid.bidder_id == user_id).delete()
+    
+    # Delete user's items (and their associated bids)
+    user_items = db.query(Item).filter(Item.owner_id == user_id).all()
+    for item in user_items:
+        db.query(Bid).filter(Bid.item_id == item.id).delete()
+    db.query(Item).filter(Item.owner_id == user_id).delete()
+    
+    # Delete the user
+    db.delete(user)
+    db.commit()
+    
+    return {"deleted": True, "message": "Benutzer erfolgreich gelöscht"}
+
 @app.post("/items/")
 async def create_item(
     title: str = Form(...),

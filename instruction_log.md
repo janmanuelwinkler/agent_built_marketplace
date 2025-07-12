@@ -30,3 +30,5 @@ please call the branch "user-login" and check it out
   "passwort": "gehashter-passwortwert",
   "datenschutz_zugestimmt": true
 }
+
+Adjusted birth date to new format. works very well.

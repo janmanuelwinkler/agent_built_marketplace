@@ -58,6 +58,7 @@
                                 <span id="username-display"></span>
                             </a>
                             <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="showAccountManagement()">Benutzerkonto</a></li>
                                 <li><a class="dropdown-item" href="#" onclick="logout()">Abmelden</a></li>
                             </ul>
                         </div>
@@ -129,6 +130,10 @@
                     <div class="mb-3">
                         <label for="password" class="form-label">Passwort *</label>
                         <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Passwort bestätigen *</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
                     </div>
                     
                     <!-- Personal Information -->
@@ -235,6 +240,121 @@
                     </div>
                     <button type="submit" class="btn btn-primary">Anmelden</button>
                     <button type="button" class="btn btn-secondary" onclick="showWelcome()">Abbrechen</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Account Management -->
+        <div id="account-management" class="card" style="display: none;">
+            <div class="card-header">
+                <h3>Benutzerkonto</h3>
+            </div>
+            <div class="card-body">
+                <form id="accountForm">
+                    <!-- Account Information -->
+                    <h5 class="mb-3">Benutzerkonto</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editUsername" class="form-label">Benutzername</label>
+                                <input type="text" class="form-control" id="editUsername" readonly>
+                                <small class="text-muted">Benutzername kann nicht geändert werden</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editEmail" class="form-label">E-Mail-Adresse *</label>
+                                <input type="email" class="form-control" id="editEmail" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPassword" class="form-label">Neues Passwort (leer lassen falls keine Änderung)</label>
+                        <input type="password" class="form-control" id="editPassword">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editConfirmPassword" class="form-label">Neues Passwort bestätigen</label>
+                        <input type="password" class="form-control" id="editConfirmPassword">
+                    </div>
+                    
+                    <!-- Personal Information -->
+                    <h5 class="mb-3">Persönliche Angaben</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editVorname" class="form-label">Vorname *</label>
+                                <input type="text" class="form-control" id="editVorname" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editNachname" class="form-label">Nachname *</label>
+                                <input type="text" class="form-control" id="editNachname" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editGeburtsdatum" class="form-label">Geburtsdatum (DD.MM.YYYY) *</label>
+                        <input type="text" class="form-control" id="editGeburtsdatum" pattern="[0-9]{2}\.[0-9]{2}\.[0-9]{4}" placeholder="12.03.1990" required>
+                    </div>
+                    
+                    <!-- Address Information -->
+                    <h5 class="mb-3">Adresse</h5>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="editStrasse" class="form-label">Strasse *</label>
+                                <input type="text" class="form-control" id="editStrasse" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editHausnummer" class="form-label">Hausnummer *</label>
+                                <input type="text" class="form-control" id="editHausnummer" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="editPostleitzahl" class="form-label">Postleitzahl *</label>
+                                <input type="text" class="form-control" id="editPostleitzahl" pattern="[0-9]{4}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="editOrt" class="form-label">Ort *</label>
+                                <input type="text" class="form-control" id="editOrt" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editLand" class="form-label">Land *</label>
+                        <select class="form-control" id="editLand" required>
+                            <option value="Schweiz">Schweiz</option>
+                            <option value="Deutschland">Deutschland</option>
+                            <option value="Österreich">Österreich</option>
+                            <option value="Frankreich">Frankreich</option>
+                            <option value="Italien">Italien</option>
+                            <option value="Liechtenstein">Liechtenstein</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Contact Information -->
+                    <h5 class="mb-3">Kontaktdaten</h5>
+                    <div class="mb-3">
+                        <label for="editTelefon" class="form-label">Telefon *</label>
+                        <input type="tel" class="form-control" id="editTelefon" pattern="\+41[0-9]{9}" placeholder="+41791234567" required>
+                        <small class="text-muted">Format: +41791234567</small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <button type="submit" class="btn btn-primary">Änderungen speichern</button>
+                            <button type="button" class="btn btn-secondary" onclick="showWelcome()">Abbrechen</button>
+                        </div>
+                        <button type="button" class="btn btn-danger" onclick="confirmDeleteAccount()">Konto löschen</button>
+                    </div>
                 </form>
             </div>
         </div>

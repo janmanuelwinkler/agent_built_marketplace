@@ -54,6 +54,7 @@ function showWelcome() {
     document.getElementById('register-form').style.display = 'none';
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('sell-form').style.display = 'none';
+    document.getElementById('account-management').style.display = 'none';
     document.getElementById('items-section').style.display = 'none';
 }
 
@@ -62,6 +63,7 @@ function showRegisterForm() {
     document.getElementById('register-form').style.display = 'block';
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('sell-form').style.display = 'none';
+    document.getElementById('account-management').style.display = 'none';
     document.getElementById('items-section').style.display = 'none';
 }
 
@@ -70,6 +72,7 @@ function showLoginForm() {
     document.getElementById('register-form').style.display = 'none';
     document.getElementById('login-form').style.display = 'block';
     document.getElementById('sell-form').style.display = 'none';
+    document.getElementById('account-management').style.display = 'none';
     document.getElementById('items-section').style.display = 'none';
 }
 
@@ -78,6 +81,7 @@ function showSellForm() {
     document.getElementById('register-form').style.display = 'none';
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('sell-form').style.display = 'block';
+    document.getElementById('account-management').style.display = 'none';
     document.getElementById('items-section').style.display = 'none';
     
     // Auto-populate user ID if logged in
@@ -94,13 +98,47 @@ function showItems() {
     document.getElementById('register-form').style.display = 'none';
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('sell-form').style.display = 'none';
+    document.getElementById('account-management').style.display = 'none';
     document.getElementById('items-section').style.display = 'block';
     loadItems();
+}
+
+function showAccountManagement() {
+    console.log('showAccountManagement called');
+    
+    try {
+        document.getElementById('welcome-section').style.display = 'none';
+        document.getElementById('register-form').style.display = 'none';
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('sell-form').style.display = 'none';
+        document.getElementById('items-section').style.display = 'none';
+        
+        const accountSection = document.getElementById('account-management');
+        if (accountSection) {
+            accountSection.style.display = 'block';
+            console.log('Account management section shown');
+            loadAccountData();
+        } else {
+            console.error('Account management section not found');
+            alert('Kontoverwaltung ist nicht verfügbar');
+        }
+    } catch (error) {
+        console.error('Error showing account management:', error);
+        alert('Fehler beim Anzeigen der Kontoverwaltung: ' + error.message);
+    }
 }
 
 // User registration
 document.getElementById('userForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Validate password confirmation
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    if (password !== confirmPassword) {
+        alert('Die Passwörter stimmen nicht überein. Bitte überprüfen Sie Ihre Eingabe.');
+        return;
+    }
     
     // Validate date format
     const geburtsdatum = document.getElementById('geburtsdatum').value;
@@ -432,6 +470,159 @@ function getTimeRemaining(endTime) {
         return `${hours}h ${minutes}m`;
     } else {
         return `${minutes}m`;
+    }
+}
+
+// Account Management Functions
+function loadAccountData() {
+    console.log('loadAccountData called, currentUser:', currentUser);
+    
+    if (currentUser) {
+        try {
+            document.getElementById('editUsername').value = currentUser.username || '';
+            document.getElementById('editEmail').value = currentUser.email || '';
+            document.getElementById('editVorname').value = currentUser.vorname || '';
+            document.getElementById('editNachname').value = currentUser.nachname || '';
+            document.getElementById('editGeburtsdatum').value = currentUser.geburtsdatum || '';
+            
+            // Handle address fields safely
+            if (currentUser.adresse) {
+                document.getElementById('editStrasse').value = currentUser.adresse.strasse || '';
+                document.getElementById('editHausnummer').value = currentUser.adresse.hausnummer || '';
+                document.getElementById('editPostleitzahl').value = currentUser.adresse.postleitzahl || '';
+                document.getElementById('editOrt').value = currentUser.adresse.ort || '';
+                document.getElementById('editLand').value = currentUser.adresse.land || 'Schweiz';
+            } else {
+                // Fallback if address structure is different
+                document.getElementById('editStrasse').value = currentUser.strasse || '';
+                document.getElementById('editHausnummer').value = currentUser.hausnummer || '';
+                document.getElementById('editPostleitzahl').value = currentUser.postleitzahl || '';
+                document.getElementById('editOrt').value = currentUser.ort || '';
+                document.getElementById('editLand').value = currentUser.land || 'Schweiz';
+            }
+            
+            document.getElementById('editTelefon').value = currentUser.telefon || '';
+            
+            // Clear password fields
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editConfirmPassword').value = '';
+            
+            console.log('Account data loaded successfully');
+        } catch (error) {
+            console.error('Error loading account data:', error);
+            alert('Fehler beim Laden der Kontodaten: ' + error.message);
+        }
+    } else {
+        console.warn('No current user found');
+        alert('Kein Benutzer angemeldet');
+    }
+}
+
+// Account form submission
+document.getElementById('accountForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    // Validate password confirmation if password is being changed
+    const newPassword = document.getElementById('editPassword').value;
+    const confirmPassword = document.getElementById('editConfirmPassword').value;
+    
+    if (newPassword && newPassword !== confirmPassword) {
+        alert('Die Passwörter stimmen nicht überein. Bitte überprüfen Sie Ihre Eingabe.');
+        return;
+    }
+    
+    // Validate date format
+    const geburtsdatum = document.getElementById('editGeburtsdatum').value;
+    const datePattern = /^[0-9]{2}\.[0-9]{2}\.[0-9]{4}$/;
+    if (!datePattern.test(geburtsdatum)) {
+        alert('Bitte geben Sie das Geburtsdatum im Format DD.MM.YYYY ein (z.B. 12.03.1990)');
+        return;
+    }
+    
+    // Validate phone format
+    const telefon = document.getElementById('editTelefon').value;
+    const phonePattern = /^\+41[0-9]{9}$/;
+    if (!phonePattern.test(telefon)) {
+        alert('Bitte geben Sie die Telefonnummer im Format +41791234567 ein');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('email', document.getElementById('editEmail').value);
+    formData.append('vorname', document.getElementById('editVorname').value);
+    formData.append('nachname', document.getElementById('editNachname').value);
+    formData.append('geburtsdatum', geburtsdatum);
+    formData.append('strasse', document.getElementById('editStrasse').value);
+    formData.append('hausnummer', document.getElementById('editHausnummer').value);
+    formData.append('postleitzahl', document.getElementById('editPostleitzahl').value);
+    formData.append('ort', document.getElementById('editOrt').value);
+    formData.append('land', document.getElementById('editLand').value);
+    formData.append('telefon', telefon);
+    
+    // Only include password if it's being changed
+    if (newPassword) {
+        formData.append('password', newPassword);
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/users/${currentUser.id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: formData
+        });
+        
+        if (response.ok) {
+            const updatedUser = await response.json();
+            
+            // Update local session
+            currentUser = updatedUser;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            alert('Ihre Änderungen wurden erfolgreich gespeichert!');
+            showWelcome();
+        } else {
+            const error = await response.json();
+            alert(`Fehler: ${error.detail}`);
+        }
+    } catch (error) {
+        alert(`Netzwerkfehler: ${error.message}`);
+    }
+});
+
+// Account deletion
+function confirmDeleteAccount() {
+    if (confirm('Sind Sie sicher, dass Sie Ihr Konto löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.\n\nHinweis: Falls Sie noch aktive Auktionen haben, bei denen Sie Höchstbietender sind, bleibt Ihr Konto bis zum Ende dieser Auktionen aktiv.')) {
+        deleteAccount();
+    }
+}
+
+async function deleteAccount() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/users/${currentUser.id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            
+            if (result.deleted) {
+                alert('Ihr Konto wurde erfolgreich gelöscht.');
+                logout();
+            } else {
+                alert('Ihr Konto kann derzeit nicht gelöscht werden, da Sie noch Höchstbietender bei aktiven Auktionen sind. Ihr Konto wird automatisch nach Ende dieser Auktionen gelöscht.');
+                showWelcome();
+            }
+        } else {
+            const error = await response.json();
+            alert(`Fehler: ${error.detail}`);
+        }
+    } catch (error) {
+        alert(`Netzwerkfehler: ${error.message}`);
     }
 }
 
