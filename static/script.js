@@ -1,9 +1,58 @@
 const API_BASE_URL = 'http://localhost:8000';
 
+// Session management
+let currentUser = null;
+let accessToken = null;
+
+// Load user session on page load
+function loadUserSession() {
+    const savedUser = localStorage.getItem('currentUser');
+    const savedToken = localStorage.getItem('accessToken');
+    
+    if (savedUser && savedToken) {
+        currentUser = JSON.parse(savedUser);
+        accessToken = savedToken;
+        updateUIForLoggedInUser();
+    }
+}
+
+function updateUIForLoggedInUser() {
+    if (currentUser) {
+        document.getElementById('user-menu').style.display = 'block';
+        document.getElementById('username-display').textContent = currentUser.username;
+        
+        // Hide login/register links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            if (link.textContent === 'Anmelden' || link.textContent === 'Registrieren') {
+                link.parentElement.style.display = 'none';
+            }
+        });
+    } else {
+        document.getElementById('user-menu').style.display = 'none';
+        
+        // Show login/register links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            if (link.textContent === 'Anmelden' || link.textContent === 'Registrieren') {
+                link.parentElement.style.display = 'block';
+            }
+        });
+    }
+}
+
+function logout() {
+    currentUser = null;
+    accessToken = null;
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('accessToken');
+    updateUIForLoggedInUser();
+    showWelcome();
+}
+
 // Navigation functions
 function showWelcome() {
     document.getElementById('welcome-section').style.display = 'block';
     document.getElementById('register-form').style.display = 'none';
+    document.getElementById('login-form').style.display = 'none';
     document.getElementById('sell-form').style.display = 'none';
     document.getElementById('items-section').style.display = 'none';
 }
@@ -11,6 +60,15 @@ function showWelcome() {
 function showRegisterForm() {
     document.getElementById('welcome-section').style.display = 'none';
     document.getElementById('register-form').style.display = 'block';
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('sell-form').style.display = 'none';
+    document.getElementById('items-section').style.display = 'none';
+}
+
+function showLoginForm() {
+    document.getElementById('welcome-section').style.display = 'none';
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('login-form').style.display = 'block';
     document.getElementById('sell-form').style.display = 'none';
     document.getElementById('items-section').style.display = 'none';
 }
@@ -18,13 +76,23 @@ function showRegisterForm() {
 function showSellForm() {
     document.getElementById('welcome-section').style.display = 'none';
     document.getElementById('register-form').style.display = 'none';
+    document.getElementById('login-form').style.display = 'none';
     document.getElementById('sell-form').style.display = 'block';
     document.getElementById('items-section').style.display = 'none';
+    
+    // Auto-populate user ID if logged in
+    if (currentUser) {
+        document.getElementById('owner_id').value = currentUser.id;
+        document.getElementById('owner-id-field').style.display = 'none';
+    } else {
+        document.getElementById('owner-id-field').style.display = 'block';
+    }
 }
 
 function showItems() {
     document.getElementById('welcome-section').style.display = 'none';
     document.getElementById('register-form').style.display = 'none';
+    document.getElementById('login-form').style.display = 'none';
     document.getElementById('sell-form').style.display = 'none';
     document.getElementById('items-section').style.display = 'block';
     loadItems();
@@ -34,33 +102,156 @@ function showItems() {
 document.getElementById('userForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    // Validate date format
+    const geburtsdatum = document.getElementById('geburtsdatum').value;
+    const datePattern = /^[0-9]{2}\.[0-9]{2}\.[0-9]{4}$/;
+    if (!datePattern.test(geburtsdatum)) {
+        alert('Bitte geben Sie das Geburtsdatum im Format DD.MM.YYYY ein (z.B. 12.03.1990)');
+        return;
+    }
+    
+    // Validate phone format
+    const telefon = document.getElementById('telefon').value;
+    const phonePattern = /^\+41[0-9]{9}$/;
+    if (!phonePattern.test(telefon)) {
+        alert('Bitte geben Sie die Telefonnummer im Format +41791234567 ein');
+        return;
+    }
+    
     const formData = new FormData();
     formData.append('username', document.getElementById('username').value);
     formData.append('email', document.getElementById('email').value);
+    formData.append('password', document.getElementById('password').value);
+    formData.append('vorname', document.getElementById('vorname').value);
+    formData.append('nachname', document.getElementById('nachname').value);
+    formData.append('geburtsdatum', geburtsdatum);
+    formData.append('strasse', document.getElementById('strasse').value);
+    formData.append('hausnummer', document.getElementById('hausnummer').value);
+    formData.append('postleitzahl', document.getElementById('postleitzahl').value);
+    formData.append('ort', document.getElementById('ort').value);
+    formData.append('land', document.getElementById('land').value);
+    formData.append('telefon', telefon);
+    const privacyConsent = document.getElementById('datenschutz_zugestimmt').checked;
+    console.log('Privacy consent checked:', privacyConsent);
+    formData.append('datenschutz_zugestimmt', privacyConsent.toString());
+    
+    // Debug: log form data
+    console.log('Form data being sent:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+    }
     
     try {
+        console.log('Making request to:', `${API_BASE_URL}/users/`);
         const response = await fetch(`${API_BASE_URL}/users/`, {
             method: 'POST',
             body: formData
         });
         
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
         if (response.ok) {
             const user = await response.json();
-            alert(`User registered successfully! Your user ID is: ${user.id}`);
+            console.log('Registration successful:', user);
+            alert(`Registrierung erfolgreich! Sie können sich jetzt mit Ihrem Benutzernamen und Passwort anmelden.`);
             document.getElementById('userForm').reset();
-            showWelcome();
+            showLoginForm();
         } else {
-            const error = await response.json();
-            alert(`Error: ${error.detail}`);
+            try {
+                const error = await response.json();
+                console.log('Server error:', error);
+                if (error.detail) {
+                    if (Array.isArray(error.detail)) {
+                        // Handle validation errors array
+                        const errorMessages = error.detail.map(err => {
+                            if (typeof err === 'string') {
+                                return err;
+                            } else if (err && err.msg) {
+                                return err.msg;
+                            } else if (err && err.loc && err.msg) {
+                                return `${err.loc.join('.')}: ${err.msg}`;
+                            } else {
+                                return `Validation error: ${JSON.stringify(err)}`;
+                            }
+                        }).join('\n');
+                        alert(`Fehler:\n${errorMessages}`);
+                    } else {
+                        alert(`Fehler: ${error.detail}`);
+                    }
+                } else {
+                    alert(`Fehler: ${JSON.stringify(error)}`);
+                }
+            } catch (parseError) {
+                console.log('Could not parse error response:', parseError);
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+                alert(`Fehler: ${response.status} - ${response.statusText}`);
+            }
         }
     } catch (error) {
-        alert('Error registering user');
+        console.error('Registration network error:', error);
+        alert(`Netzwerkfehler: ${error.message}\n\nBitte überprüfen Sie:\n- Ist der Server gestartet?\n- Läuft die Anwendung auf http://localhost:8000?`);
+    }
+});
+
+// User login
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('username', document.getElementById('loginUsername').value);
+    formData.append('password', document.getElementById('loginPassword').value);
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/login/`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Save user session
+            currentUser = data.user;
+            accessToken = data.access_token;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            localStorage.setItem('accessToken', accessToken);
+            
+            // Update UI
+            updateUIForLoggedInUser();
+            alert(`Willkommen zurück, ${currentUser.vorname}!`);
+            document.getElementById('loginForm').reset();
+            showWelcome();
+        } else {
+            try {
+                const error = await response.json();
+                alert(`Fehler: ${error.detail}`);
+            } catch (parseError) {
+                alert(`Fehler: ${response.status} - ${response.statusText}`);
+            }
+        }
+    } catch (error) {
+        alert(`Netzwerkfehler: ${error.message}`);
     }
 });
 
 // Item listing
 document.getElementById('itemForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Validate image file
+    const imageFile = document.getElementById('image').files[0];
+    if (!imageFile) {
+        alert('Please select an image file');
+        return;
+    }
+    
+    // Check if it's an image
+    if (!imageFile.type.startsWith('image/')) {
+        alert('Please select a valid image file');
+        return;
+    }
     
     const formData = new FormData();
     formData.append('title', document.getElementById('title').value);
@@ -69,7 +260,7 @@ document.getElementById('itemForm').addEventListener('submit', async (e) => {
     formData.append('starting_price', document.getElementById('starting_price').value);
     formData.append('owner_id', document.getElementById('owner_id').value);
     formData.append('duration_hours', document.getElementById('duration').value);
-    formData.append('file', document.getElementById('image').files[0]);
+    formData.append('file', imageFile);
     
     try {
         const response = await fetch(`${API_BASE_URL}/items/`, {
@@ -78,7 +269,7 @@ document.getElementById('itemForm').addEventListener('submit', async (e) => {
         });
         
         if (response.ok) {
-            const item = await response.json();
+            await response.json();
             alert('Item listed successfully!');
             document.getElementById('itemForm').reset();
             showItems();
@@ -87,7 +278,7 @@ document.getElementById('itemForm').addEventListener('submit', async (e) => {
             alert(`Error: ${error.detail}`);
         }
     } catch (error) {
-        alert('Error listing item');
+        alert(`Error listing item: ${error.message}`);
     }
 });
 
@@ -169,6 +360,14 @@ async function showItemDetail(itemId) {
         // Store item ID for bidding
         document.getElementById('bidForm').setAttribute('data-item-id', itemId);
         
+        // Auto-populate bidder ID if logged in
+        if (currentUser) {
+            document.getElementById('bidderUserId').value = currentUser.id;
+            document.getElementById('bidder-id-field').style.display = 'none';
+        } else {
+            document.getElementById('bidder-id-field').style.display = 'block';
+        }
+        
         // Display bids
         const bidsContainer = document.getElementById('itemBids');
         bidsContainer.innerHTML = '';
@@ -216,7 +415,7 @@ document.getElementById('bidForm').addEventListener('submit', async (e) => {
         });
         
         if (response.ok) {
-            const bid = await response.json();
+            await response.json();
             alert('Bid placed successfully!');
             document.getElementById('bidForm').reset();
             
@@ -256,5 +455,6 @@ function getTimeRemaining(endTime) {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    loadUserSession();
     showWelcome();
 });
